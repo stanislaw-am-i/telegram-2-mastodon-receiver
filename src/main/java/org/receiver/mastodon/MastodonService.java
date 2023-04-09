@@ -1,14 +1,17 @@
 package org.receiver.mastodon;
 
+import okhttp3.Response;
+import org.json.JSONObject;
+import org.receiver.messages.Media;
 import org.receiver.messages.Message;
 import org.receiver.messages.MessageRepository;
 import org.receiver.reciver.Configuration;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import okhttp3.*;
 
 public class MastodonService {
 
@@ -31,28 +34,72 @@ public class MastodonService {
     public void postStatusesToMastodon() throws IOException, InterruptedException {
         Map<String, Message> statusesToPost = statuses.getMessages();
         Set<String> statusesLocalIds = statuses.getMessagesIds();
+        List<Media> mediaStorage = statuses.getMediaStorage();
 
-        MastodonAPI postStatus = new MastodonAPI();
-        postStatus.setMediaType(STATUS_MEDIA_TYPE);
-        
-        for ( String statusId : statusesLocalIds ) {
-            Message status = statusesToPost.get(statusId);
+        for ( Media media : mediaStorage ) {
+            MastodonAPI uploadMedia = new MastodonAPI();
+            uploadMedia.setBody(media.getId(), media.getPathToFile());
 
-            String body = "";
+            String url = baseUrl + "media?" + authSign;
+            uploadMedia.setRequest(url, "POST");
+            uploadMedia.makeCall();
+            Response response = uploadMedia.getResponse();
 
-            if ( !status.isMessageEmpty() ) {
-                body = "status=" + status.getTextMessage();
+            if ( response.code() == 200 ) {
+                String stringifyResponse = response.body().string();
+                System.out.println(stringifyResponse);
+                JSONObject prettyResponse = new JSONObject(stringifyResponse);
+
+                media.setExternalId( prettyResponse.get("id").toString() );
+            } else {
+                System.out.println("Failed to Upload Media");
             }
-
-            postStatus.setBody(body);
-
-            String url = baseUrl + "statuses?" + authSign;
-            postStatus.setRequest(url, "POST", STATUS_MEDIA_TYPE);
-
-            postStatus.makeCall();
-            Response response = postStatus.getResponse();
 
             TimeUnit.MINUTES.sleep(1);
         }
+
+        for ( String statusId : statusesLocalIds ) {
+            Message status = statusesToPost.get(statusId);
+            String body = "status=";
+
+            if ( !status.isMessageEmpty() ) {
+                body += status.getTextMessage();
+            }
+
+            if ( !status.getMediaRepository().isEmpty() ) {
+                String mediaExternalId = status.getMediaRepository().get(0).getExternalId();
+                body += "&media_ids[]=" + mediaExternalId;
+            }
+
+            if ( status.getParentMessageId() != null ) {
+                Message parentMessage = statusesToPost.get(status.getParentMessageId());
+
+                if ( parentMessage.getExternalId() != null ) {
+                    body += "&in_reply_to_id=" + parentMessage.getExternalId();
+                }
+            }
+
+            MastodonAPI postStatus = new MastodonAPI();
+            postStatus.setMediaType(STATUS_MEDIA_TYPE);
+            postStatus.setBody(body);
+            System.out.println(body);
+            String url = baseUrl + "statuses?" + authSign;
+            postStatus.setRequest(url, "POST", STATUS_MEDIA_TYPE);
+            postStatus.makeCall();
+            Response response = postStatus.getResponse();
+
+            if ( response.code() == 200 ) {
+                String stringifyResponse = response.body().string();
+                System.out.println(stringifyResponse);
+                JSONObject prettyResponse = new JSONObject(stringifyResponse);
+
+                status.setExternalId( prettyResponse.get("id").toString() );
+            } else {
+                System.out.println("Failed to Post Status");
+            }
+
+            TimeUnit.MINUTES.sleep(1);
+        }
+
     }
 }
