@@ -3,24 +3,26 @@ package org.receiver.messages;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 public class Message {
 
     private String messageId;
     private String externalId;
-    private UUID parentMessageId;
+    private String parentMessageId;
     private String parentMessageExternalId;
     private String textMessage;
     private List<Media> mediaRepository;
 
     public Message() {
         mediaRepository = new ArrayList<>();
-        messageId = UUID.randomUUID().toString();
     }
 
     public String getMessageId() {
         return messageId;
+    }
+
+    public void setMessageId(String messageId) {
+        this.messageId = messageId;
     }
 
     public String getExternalId() {
@@ -31,11 +33,11 @@ public class Message {
         this.externalId = externalId;
     }
 
-    public UUID getParentMessageId() {
+    public String getParentMessageId() {
         return parentMessageId;
     }
 
-    public void setParentMessageId(UUID parentMessageId) {
+    public void setParentMessageId(String parentMessageId) {
         this.parentMessageId = parentMessageId;
     }
 
@@ -101,7 +103,8 @@ public class Message {
     @Override
     public String toString() {
         return "Message{" +
-                "externalId='" + externalId + '\'' +
+                "messageId='" + messageId + '\'' +
+                ", externalId=" + externalId +
                 ", parentMessageId=" + parentMessageId +
                 ", parentMessageExternalId='" + parentMessageExternalId + '\'' +
                 ", textMessage='" + textMessage + '\'' +

@@ -54,6 +54,8 @@ public class MastodonAPI {
             throw new RuntimeException("Please, Specify The File's Path");
         }
 
+        //TODO: validation for mediaType and
+
         this.body = new MultipartBody.Builder().setType(MultipartBody.FORM)
                 .addFormDataPart(
                         "file",fileName,

@@ -4,21 +4,26 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MessageRepository {
 
     private Set<String> messagesIds;
     private Map<String, Message> messages;
+    private List<Media> mediaStorage;
     private int countMessages;
 
     public MessageRepository(Elements parsedData) {
         messages = new HashMap<>();
-        messagesIds = new HashSet<>();
+        messagesIds = new TreeSet<>();
+        mediaStorage = new ArrayList<>();
         countMessages = 0;
 
         for (Element rawMessage : parsedData) {
             if ( rawMessage.classNames().contains("default") ) {
                 Message message = new Message();
+                message.setMessageId( rawMessage.attr("id") );
 
                 String textMessage = rawMessage.getElementsByClass("text").text();
                 if ( !textMessage.isBlank() ) {
@@ -37,7 +42,7 @@ public class MessageRepository {
                 String photoPath = rawMessage.getElementsByClass("photo_wrap").attr("href");
                 if ( !photoPath.isBlank() ) {
                     Media photo = new Media();
-                    photo.setPathToFile(photoPath);
+                    photo.setPathToFile( "src/main/resources/ChatExport_2023-04-09/" + photoPath );
                     photo.setMessageId(message.getMessageId());
 
                     message.addMediaFileToRepository(photo);
@@ -61,6 +66,18 @@ public class MessageRepository {
                     message.addMediaFileToRepository(video);
                 }
 
+                Element reply = rawMessage.getElementsByClass("reply_to").first();
+                if ( reply != null ) {
+                    String replyHref = reply.getElementsByTag("a").first().attr("href");
+
+                    Pattern pattern = Pattern.compile("(message.*)");
+                    Matcher matcher = pattern.matcher(replyHref);
+                    if ( matcher.find() ) {
+                        message.setParentMessageId( matcher.group(1) );
+                    }
+                }
+
+
                 Boolean isMessageEmpty = message.isMessageEmpty();
                 if ( !isMessageEmpty ) {
                     addMessage(message);
@@ -78,9 +95,14 @@ public class MessageRepository {
         return messagesIds;
     }
 
+    public List<Media> getMediaStorage() {
+        return mediaStorage;
+    }
+
     public void addMessage(Message message) {
         messages.put(message.getMessageId(), message);
         messagesIds.add(message.getMessageId());
+        mediaStorage.addAll(message.getMediaRepository());
         countMessages++;
     }
 
