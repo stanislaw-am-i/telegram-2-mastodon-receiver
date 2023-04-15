@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class MastodonService {
-
     private static final String STATUS_MEDIA_TYPE = "application/x-www-form-urlencoded";
     private MessageRepository statuses;
     private Configuration config;
@@ -59,7 +58,10 @@ public class MastodonService {
         }
 
         for ( String statusId : statusesLocalIds ) {
+
             Message status = statusesToPost.get(statusId);
+            System.out.println(status.getMessageId());
+            System.out.println(status.getTextMessage());
             String body = "status=";
 
             if ( !status.isMessageEmpty() ) {

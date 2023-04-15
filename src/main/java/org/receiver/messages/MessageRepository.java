@@ -16,72 +16,49 @@ public class MessageRepository {
 
     public MessageRepository(Elements parsedData) {
         messages = new HashMap<>();
-        messagesIds = new TreeSet<>();
+        messagesIds = new LinkedHashSet<>();
         mediaStorage = new ArrayList<>();
         countMessages = 0;
 
         for (Element rawMessage : parsedData) {
             if ( rawMessage.classNames().contains("default") ) {
-                Message message = new Message();
-                message.setMessageId( rawMessage.attr("id") );
-
                 String textMessage = rawMessage.getElementsByClass("text").text();
-                if ( !textMessage.isBlank() ) {
-                    message.setTextMessage(textMessage);
-                }
+                Boolean isMessageTooLong = !textMessage.isBlank() && textMessage.length() > 500;
 
-                String stickerPath = rawMessage.getElementsByClass("media_photo").attr("href");
-                if ( !stickerPath.isBlank() ) {
-                    Media sticker = new Media();
-                    sticker.setPathToFile(stickerPath);
-                    sticker.setMessageId(message.getMessageId());
+                if ( !isMessageTooLong ) {
+                    Message message = new Message();
+                    message.setMessageId( rawMessage.attr("id") );
 
-                    message.addMediaFileToRepository(sticker);
-                }
+                    String photoPath = rawMessage.getElementsByClass("photo_wrap").attr("href");
+                    if ( !photoPath.isBlank() ) {
+                        Media photo = new Media();
+                        photo.setPathToFile( "src/main/resources/ChatExport_2023-04-09/" + photoPath );
+                        photo.setMessageId(message.getMessageId());
 
-                String photoPath = rawMessage.getElementsByClass("photo_wrap").attr("href");
-                if ( !photoPath.isBlank() ) {
-                    Media photo = new Media();
-                    photo.setPathToFile( "src/main/resources/ChatExport_2023-04-09/" + photoPath );
-                    photo.setMessageId(message.getMessageId());
-
-                    message.addMediaFileToRepository(photo);
-                }
-
-                /*String gifPath = rawMessage.getElementsByClass("animated_wrap").attr("href");
-                if ( !gifPath.isBlank() ) {
-                    Media gif = new Media();
-                    gif.setPathToFile(gifPath);
-                    gif.setMessageId(message.getId());
-
-                    message.addMediaFileToRepository(gif);
-                }*/
-
-                String videoPath = rawMessage.getElementsByClass("video_file_wrap").attr("href");
-                if ( !videoPath.isBlank() ) {
-                    Media video = new Media();
-                    video.setPathToFile(videoPath);
-                    video.setMessageId(message.getMessageId());
-
-                    message.addMediaFileToRepository(video);
-                }
-
-                Element reply = rawMessage.getElementsByClass("reply_to").first();
-                if ( reply != null ) {
-                    String replyHref = reply.getElementsByTag("a").first().attr("href");
-
-                    Pattern pattern = Pattern.compile("(message.*)");
-                    Matcher matcher = pattern.matcher(replyHref);
-                    if ( matcher.find() ) {
-                        message.setParentMessageId( matcher.group(1) );
+                        message.addMediaFileToRepository(photo);
                     }
-                }
 
+                    Element reply = rawMessage.getElementsByClass("reply_to").first();
+                    if ( reply != null ) {
+                        String replyHref = reply.getElementsByTag("a").first().attr("href");
 
-                Boolean isMessageEmpty = message.isMessageEmpty();
-                if ( !isMessageEmpty ) {
-                    addMessage(message);
-                    System.out.println( message.getMessageId() );
+                        Pattern pattern = Pattern.compile("(message.*)");
+                        Matcher matcher = pattern.matcher(replyHref);
+                        if ( matcher.find() ) {
+                            message.setParentMessageId( matcher.group(1) );
+                        }
+                    }
+
+                    if ( !textMessage.isBlank() ) {
+                        message.setTextMessage(textMessage);
+                    }
+
+                    Boolean isMessageEmpty = message.isMessageEmpty();
+                    if ( !isMessageEmpty ) {
+                        addMessage(message);
+                    }
+                } else {
+                    splitLongMessage(rawMessage, textMessage);
                 }
             }
         }
@@ -103,7 +80,69 @@ public class MessageRepository {
         messages.put(message.getMessageId(), message);
         messagesIds.add(message.getMessageId());
         mediaStorage.addAll(message.getMediaRepository());
+        System.out.println( message.getMessageId() );
         countMessages++;
+    }
+
+    public void splitLongMessage(Element rawMessage, String messageText) {
+        Message mainMessage = new Message();
+        mainMessage.setMessageId( rawMessage.attr("id") );
+
+        String photoPath = rawMessage.getElementsByClass("photo_wrap").attr("href");
+        if ( !photoPath.isBlank() ) {
+            Media photo = new Media();
+            photo.setPathToFile( "src/main/resources/ChatExport_2023-04-09/" + photoPath );
+            photo.setMessageId(mainMessage.getMessageId());
+
+            mainMessage.addMediaFileToRepository(photo);
+        }
+
+        Element reply = rawMessage.getElementsByClass("reply_to").first();
+        if ( reply != null ) {
+            String replyHref = reply.getElementsByTag("a").first().attr("href");
+
+            Pattern pattern = Pattern.compile("(message.*)");
+            Matcher matcher = pattern.matcher(replyHref);
+            if ( matcher.find() ) {
+                mainMessage.setParentMessageId( matcher.group(1) );
+            }
+        }
+
+        String[] parts = messageText.split("(?<=[.!?]\\s)");
+        List<String> chunks = new ArrayList<>();
+        int maxStatusLength = 489;
+
+        String currentChunk = "";
+        for (String sentence : parts) {
+            if (currentChunk.length() + sentence.length() > maxStatusLength) {
+                chunks.add(currentChunk);
+                currentChunk = sentence;
+            } else {
+                currentChunk += " " + sentence;
+            }
+        }
+
+        chunks.add(currentChunk);
+
+        int totalCount = chunks.size();
+        String parentMessageId = mainMessage.getMessageId();
+        for (int i = 0; i < totalCount; i++) {
+            String chunk = chunks.get(i);
+            int chunkNumber = i + 1;
+            String formattedChunk = "(" + chunkNumber + "/" + totalCount + ") " + chunk;
+
+            if ( i != 0 ) {
+                Message splittedMessage = new Message();
+                splittedMessage.setTextMessage(formattedChunk);
+                splittedMessage.setMessageId(parentMessageId + "_" + chunkNumber);
+                splittedMessage.setParentMessageId(parentMessageId);
+
+                addMessage(splittedMessage);
+            } else {
+                mainMessage.setTextMessage(formattedChunk);
+                addMessage(mainMessage);
+            }
+        }
     }
 
     public int getCountMessages() {

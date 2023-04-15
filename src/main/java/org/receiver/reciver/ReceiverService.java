@@ -1,14 +1,14 @@
 package org.receiver.reciver;
 
-import java.io.File;
-import java.io.FileReader;
-import java.util.Properties;
-
-import org.receiver.mastodon.MastodonService;
-import org.receiver.messages.MessageRepository;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
+import org.receiver.mastodon.MastodonService;
+import org.receiver.messages.MessageRepository;
+
+import java.io.File;
+import java.io.FileReader;
+import java.util.Properties;
 
 public class ReceiverService {
 
