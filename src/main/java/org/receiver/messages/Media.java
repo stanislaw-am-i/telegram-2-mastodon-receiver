@@ -10,6 +10,13 @@ public class Media {
     private String externalId;
     private String pathToFile;
 
+    public Media() {}
+
+    public Media(String pathToFile, String messageId) {
+        this.pathToFile = pathToFile;
+        this.messageId = messageId;
+    }
+
     public String getId() {
         return MEDIA_ID;
     }

@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 public class MastodonService {
     private static final String STATUS_MEDIA_TYPE = "application/x-www-form-urlencoded";
@@ -51,17 +50,19 @@ public class MastodonService {
 
                 media.setExternalId( prettyResponse.get("id").toString() );
             } else {
-                System.out.println("Failed to Upload Media");
+                String stringifyResponse = response.body().string();
+                System.out.println(stringifyResponse);
+                //System.out.println("Failed to Upload Media");
             }
 
-            TimeUnit.MINUTES.sleep(1);
+            //TimeUnit.MINUTES.sleep(1);
         }
 
         for ( String statusId : statusesLocalIds ) {
 
             Message status = statusesToPost.get(statusId);
-            System.out.println(status.getMessageId());
-            System.out.println(status.getTextMessage());
+            System.out.println(status);
+            //System.out.println(status.getTextMessage());
             String body = "status=";
 
             if ( !status.isMessageEmpty() ) {
@@ -84,7 +85,7 @@ public class MastodonService {
             MastodonAPI postStatus = new MastodonAPI();
             postStatus.setMediaType(STATUS_MEDIA_TYPE);
             postStatus.setBody(body);
-            System.out.println(body);
+            //System.out.println(body);
             String url = baseUrl + "statuses?" + authSign;
             postStatus.setRequest(url, "POST", STATUS_MEDIA_TYPE);
             postStatus.makeCall();
@@ -100,7 +101,7 @@ public class MastodonService {
                 System.out.println("Failed to Post Status");
             }
 
-            TimeUnit.MINUTES.sleep(1);
+            //TimeUnit.MINUTES.sleep(1);
         }
 
     }
