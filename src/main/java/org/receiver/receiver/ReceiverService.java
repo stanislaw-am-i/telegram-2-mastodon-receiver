@@ -1,4 +1,4 @@
-package org.receiver.reciver;
+package org.receiver.receiver;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -17,14 +17,13 @@ public class ReceiverService {
             Properties properties = new Properties();
             properties.load(reader);
 
-            Configuration config = new Configuration();
-            config.setPathToExportedData( properties.getProperty("PATH_TO_EXPORTED_DATA") );
-            config.setAccessToken( properties.getProperty("ACCESS_TOKEN") );
-            config.setBaseUrl( properties.getProperty("BASE_URL") );
-            config.setCharacterLimit( properties.getProperty("CHARACTER_LIMITATION") );
-            config.setInterval( properties.getProperty("INTERVAL") );
+            String pathToData = properties.getProperty("PATH_TO_EXPORTED_DATA");
+            int charactersLimit = Integer.valueOf(properties.getProperty("CHARACTER_LIMITATION"));
+            String baseUrl = properties.getProperty("BASE_URL");
+            String authSign = properties.getProperty("ACCESS_TOKEN");
+            int interval = Integer.valueOf(properties.getProperty("INTERVAL"));
 
-            File input = new File( config.getPathToExportedData() );
+            File input = new File( pathToData );
             Document doc = Jsoup.parse(input);
             Elements parsedData = doc.getElementsByClass("message");
 
@@ -32,9 +31,8 @@ public class ReceiverService {
                 throw new RuntimeException("The Exported Data Is Empty");
             }
 
-            MessageRepository messages = new MessageRepository(parsedData);
-            System.out.println(config.getInterval());
-            MastodonService mastodonService = new MastodonService(messages, config);
+            MessageRepository messages = new MessageRepository(parsedData, pathToData, charactersLimit);
+            MastodonService mastodonService = new MastodonService(messages, baseUrl, authSign, interval);
             mastodonService.postStatusesToMastodon();
         } catch (Exception e) {;
             e.printStackTrace();

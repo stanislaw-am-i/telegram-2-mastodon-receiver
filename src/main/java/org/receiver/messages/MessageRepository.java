@@ -12,13 +12,15 @@ public class MessageRepository {
     private Set<String> messagesIds;
     private Map<String, Message> messages;
     private List<Media> mediaStorage;
-    private int countMessages;
+    private String pathToData;
+    private int characterLimit;
 
-    public MessageRepository(Elements parsedData) {
+    public MessageRepository(Elements parsedData, String pathToData, int characterLimit) {
         messages = new HashMap<>();
         messagesIds = new LinkedHashSet<>();
         mediaStorage = new ArrayList<>();
-        countMessages = 0;
+        this.pathToData = pathToData;
+        this.characterLimit = characterLimit;
 
         for (Element rawMessage : parsedData) {
             if ( rawMessage.classNames().contains("default") ) {
@@ -26,61 +28,6 @@ public class MessageRepository {
             }
         }
     }
-
-    /*private void processMessages(Element rawMessage) {
-        Message message = new Message();
-        message.setMessageId( rawMessage.attr("id") );
-
-        Element reply = rawMessage.getElementsByClass("reply_to").first();
-        String replyTo = getParentMessageId(reply);
-        if ( replyTo!= null && !replyTo.isBlank() ) {
-            message.setParentMessageId(replyTo);
-        }
-
-        String photoPath = rawMessage.getElementsByClass("photo_wrap").attr("href");
-        if ( !photoPath.isBlank() ) {
-            Media photo = new Media("src/main/resources/ChatExport_2023-04-09/" + photoPath, message.getMessageId());
-            message.addMediaFileToRepository(photo);
-        }
-
-        String videoPath = rawMessage.getElementsByClass("video_file_wrap").attr("href");
-        if ( !videoPath.isBlank() ) {
-            Media video = new Media("src/main/resources/ChatExport_2023-04-09/" + videoPath, message.getMessageId());
-            message.addMediaFileToRepository(video);
-        }
-
-        String voicePath = rawMessage.getElementsByClass("media_voice_message").attr("href");
-        if ( !voicePath.isBlank() ) {
-            Media voice = new Media("src/main/resources/ChatExport_2023-04-09/" + voicePath, message.getMessageId());
-            message.addMediaFileToRepository(voice);
-        }
-
-        String gifPath = rawMessage.getElementsByClass("animated_wrap").attr("href");
-        if ( !gifPath.isBlank() ) {
-            Media gif = new Media("src/main/resources/ChatExport_2023-04-09/" + gifPath, message.getMessageId());
-            message.addMediaFileToRepository(gif);
-        }
-
-        String audioPath = rawMessage.getElementsByClass("media_audio_file").attr("href");
-        if ( !audioPath.isBlank() ) {
-            Media audio = new Media("src/main/resources/ChatExport_2023-04-09/" + audioPath, message.getMessageId());
-            message.addMediaFileToRepository(audio);
-        }
-
-        String filePath = rawMessage.getElementsByClass("media_file").attr("href");
-        if ( !filePath.isBlank() ) {
-            Media file = new Media("src/main/resources/ChatExport_2023-04-09/" + filePath, message.getMessageId());
-            message.addMediaFileToRepository(file);
-        }
-
-        String textMessage = rawMessage.getElementsByClass("text").text();
-        if (textMessage.length() > 500) {
-            splitLongMessage(message, textMessage);
-        } else {
-            message.setTextMessage(textMessage);
-            addMessage(message);
-        }
-    }*/
 
     private void processMessages(Element rawMessage) {
         Message message = new Message();
@@ -104,7 +51,7 @@ public class MessageRepository {
     private void addMediaIfPresent(Element rawMessage, Message message, String className) {
         String path = rawMessage.getElementsByClass(className).attr("href");
         if (!path.isBlank()) {
-            Media media = new Media("src/main/resources/ChatExport_2023-04-09/" + path, message.getMessageId());
+            Media media = new Media(pathToData + path, message.getMessageId());
             message.addMediaFileToRepository(media);
         }
     }
@@ -114,11 +61,16 @@ public class MessageRepository {
         String forwardedTitle = getForwardedTitle(forwardedBody);
         String textMessage = rawMessage.getElementsByClass("text").text();
 
-        if ( forwardedTitle != null && !forwardedTitle.isBlank() ) {
-            textMessage = forwardedTitle + "\n" + textMessage;
+        boolean isHaveText = textMessage != null && !textMessage.isBlank();
+        message.setHaveText(isHaveText);
+        boolean isForwarded = forwardedTitle != null && !forwardedTitle.isBlank();
+        message.setForwarded(isForwarded);
+
+        if ( isForwarded ) {
+            textMessage = "forwarded from " + forwardedTitle + "\n" + textMessage;
         }
 
-        if (textMessage.length() > 500) {
+        if (textMessage.length() > characterLimit) {
             splitLongMessage(message, textMessage);
         } else {
             message.setTextMessage(textMessage);
@@ -133,7 +85,7 @@ public class MessageRepository {
     private void splitLongMessage(Message mainMessage, String messageText) {
         String[] parts = messageText.split("(?<=[.!?]\\s)");
         List<String> chunks = new ArrayList<>();
-        int maxStatusLength = 489;
+        int maxStatusLength = characterLimit - 11;
 
         StringBuilder currentChunk = new StringBuilder();
         for (String sentence : parts) {
@@ -203,11 +155,5 @@ public class MessageRepository {
         messages.put(message.getMessageId(), message);
         messagesIds.add(message.getMessageId());
         mediaStorage.addAll(message.getMediaRepository());
-        System.out.println( message.getMessageId() );
-        countMessages++;
-    }
-
-    public int getCountMessages() {
-        return countMessages;
     }
 }

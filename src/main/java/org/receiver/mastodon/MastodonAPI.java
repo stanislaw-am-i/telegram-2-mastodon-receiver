@@ -1,6 +1,7 @@
 package org.receiver.mastodon;
 
 import okhttp3.*;
+import org.receiver.receiver.ReceiverException;
 
 import java.io.File;
 import java.io.IOException;
@@ -17,12 +18,16 @@ public class MastodonAPI {
         client = new OkHttpClient().newBuilder().build();
     }
 
-    public void makeCall() throws IOException {
-        if ( request == null ) {
-            throw new RuntimeException("Please, Create The Body Of Request First");
-        }
+    public void makeCall() {
+        try {
+            if ( request == null ) {
+                throw new ReceiverException("Please, Create The Body Of Request First");
+            }
 
-        response = client.newCall(request).execute();
+            response = client.newCall(request).execute();
+        } catch (ReceiverException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void setClient(OkHttpClient client) {
@@ -33,13 +38,13 @@ public class MastodonAPI {
         this.mediaType = MediaType.parse(mediaType);;
     }
 
-    public void setBody(String status) {
+    public void setBody(String status) throws ReceiverException {
         if ( mediaType == null ) {
-            throw new RuntimeException("Please, Specify The Media Type First");
+            throw new ReceiverException("Please, Specify The Media Type First");
         }
 
         if ( status.isBlank() ) {
-            throw new RuntimeException("The Status Can't Be Empty");
+            throw new ReceiverException("The Status Can't Be Empty");
         }
 
         this.body = RequestBody.create(mediaType, status);
@@ -53,8 +58,6 @@ public class MastodonAPI {
         if ( filePath.isBlank() ) {
             throw new RuntimeException("Please, Specify The File's Path");
         }
-
-        //TODO: validation for mediaType and
 
         this.body = new MultipartBody.Builder().setType(MultipartBody.FORM)
                 .addFormDataPart(
@@ -111,7 +114,6 @@ public class MastodonAPI {
     }
 
     public Response getResponse() {
-        //TODO response class
         return response;
     }
 }
