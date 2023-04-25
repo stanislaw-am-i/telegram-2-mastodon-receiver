@@ -32,12 +32,13 @@ public class MastodonService {
             processUploadMedia(statuses.getMediaStorage());
             processUploadStatuses(statuses.getMessages(), statuses.getMessagesIds());
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println(e);
         }
 
     }
 
-    private void processUploadMedia(List<Media> mediaStorage) throws InterruptedException, IOException {
+    private void processUploadMedia(List<Media> mediaStorage)
+            throws InterruptedException, IOException, ReceiverException {
         for ( Media media : mediaStorage ) {
             MastodonAPI uploadMedia = new MastodonAPI();
             uploadMedia.setBody(media.getId(), media.getPathToFile());
@@ -52,9 +53,8 @@ public class MastodonService {
             if ( media.getUploaded() ) {
                 JSONObject prettyResponse = new JSONObject(stringifyResponse);
                 media.setExternalId( prettyResponse.get("id").toString() );
-            } else {
-                System.out.println(stringifyResponse);
             }
+            System.out.println(stringifyResponse);
 
             TimeUnit.SECONDS.sleep(interval);
         }
@@ -99,9 +99,8 @@ public class MastodonService {
             if (response.isSuccessful()) {
                 JSONObject prettyResponse = new JSONObject(stringifyResponse);
                 status.setExternalId(prettyResponse.get("id").toString());
-            } else {
-                System.out.println(stringifyResponse);
             }
+            System.out.println(stringifyResponse);
 
             TimeUnit.SECONDS.sleep(interval);
         }

@@ -18,16 +18,12 @@ public class MastodonAPI {
         client = new OkHttpClient().newBuilder().build();
     }
 
-    public void makeCall() {
-        try {
-            if ( request == null ) {
-                throw new ReceiverException("Please, Create The Body Of Request First");
-            }
-
-            response = client.newCall(request).execute();
-        } catch (ReceiverException | IOException e) {
-            e.printStackTrace();
+    public void makeCall() throws ReceiverException, IOException {
+        if ( request == null ) {
+            throw new ReceiverException("Please, Create The Body Of Request First");
         }
+
+        response = client.newCall(request).execute();
     }
 
     public void setClient(OkHttpClient client) {

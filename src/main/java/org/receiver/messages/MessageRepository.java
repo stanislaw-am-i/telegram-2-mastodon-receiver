@@ -110,6 +110,7 @@ public class MessageRepository {
                 splittedMessage.setTextMessage(formattedChunk);
                 splittedMessage.setMessageId(parentMessageId + "_" + chunkNumber);
                 splittedMessage.setParentMessageId(parentMessageId);
+                splittedMessage.setHaveText(true);
 
                 addMessage(splittedMessage);
             } else {
@@ -152,8 +153,10 @@ public class MessageRepository {
     }
 
     public void addMessage(Message message) {
-        messages.put(message.getMessageId(), message);
-        messagesIds.add(message.getMessageId());
-        mediaStorage.addAll(message.getMediaRepository());
+        if ( !messages.containsKey(message.getMessageId()) ) {
+            messages.put(message.getMessageId(), message);
+            messagesIds.add(message.getMessageId());
+            mediaStorage.addAll(message.getMediaRepository());
+        }
     }
 }

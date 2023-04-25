@@ -1,0 +1,5 @@
+ACCESS_TOKEN=<Your access token>
+BASE_URL=https://yourinstance.social
+CHARACTER_LIMITATION=500
+INTERVAL=60
+PATH_TO_EXPORTED_DATA=Exported_Data_Dir/

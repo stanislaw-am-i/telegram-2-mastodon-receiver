@@ -23,19 +23,25 @@ public class ReceiverService {
             String authSign = properties.getProperty("ACCESS_TOKEN");
             int interval = Integer.valueOf(properties.getProperty("INTERVAL"));
 
-            File input = new File( pathToData );
+            File input = new File( pathToData + "messages.html" );
             Document doc = Jsoup.parse(input);
             Elements parsedData = doc.getElementsByClass("message");
 
             if ( parsedData.isEmpty() ) {
-                throw new RuntimeException("The Exported Data Is Empty");
+                throw new ReceiverException("The Exported Data Is Empty");
             }
 
             MessageRepository messages = new MessageRepository(parsedData, pathToData, charactersLimit);
             MastodonService mastodonService = new MastodonService(messages, baseUrl, authSign, interval);
             mastodonService.postStatusesToMastodon();
         } catch (Exception e) {;
-            e.printStackTrace();
+            System.out.println(e.getClass() + " " + e.getMessage() + " " + e.getCause());
+            int size = e.getStackTrace().length - 1;
+            System.out.println("   Root cause: " + e.getStackTrace()[size].getMethodName() + " " + e.getStackTrace()[size].getClassName());
+            if (size>1) {
+                System.out.println("   Penultimate cause: method=" + e.getStackTrace()[size-1].getMethodName() + " class=" + e.getStackTrace()[size-1].getClassName() +
+                        " line=" + e.getStackTrace()[size-1].getLineNumber());
+            }
         }
     }
 }
