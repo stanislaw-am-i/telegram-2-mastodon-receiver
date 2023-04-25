@@ -9,7 +9,7 @@ Java must be installed on your machine. This program was tested with the 19th ve
 
 1) Run the following command in the terminal to get the .jar file: 
 
-``wget https://github.com/stanislaw-am-i/telegram-2-mastodon-receiver/releases/download/v0.0.1/telegram-2-mastodon-receiver-0.0.1-all.jar``
+``wget https://github.com/stanislaw-am-i/telegram-2-mastodon-receiver/releases/download/0.0.1/telegram-2-mastodon-receiver-0.0.1-all.jar``
 
 
 2) Export your data from Telegram. How to do it you can check here: https://telegram.org/blog/export-and-more
