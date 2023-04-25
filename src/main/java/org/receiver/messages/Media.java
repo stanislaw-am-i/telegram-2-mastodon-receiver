@@ -1,6 +1,5 @@
 package org.receiver.messages;
 
-import java.util.Objects;
 import java.util.UUID;
 
 public class Media {
@@ -9,6 +8,12 @@ public class Media {
     private String messageId;
     private String externalId;
     private String pathToFile;
+    private boolean isUploaded;
+
+    public Media(String pathToFile, String messageId) {
+        this.pathToFile = pathToFile;
+        this.messageId = messageId;
+    }
 
     public String getId() {
         return MEDIA_ID;
@@ -38,22 +43,12 @@ public class Media {
         this.pathToFile = pathToFile;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Media media = (Media) o;
-
-        if (!Objects.equals(externalId, media.externalId)) return false;
-        return Objects.equals(pathToFile, media.pathToFile);
+    public boolean getUploaded() {
+        return isUploaded;
     }
 
-    @Override
-    public int hashCode() {
-        int result = externalId != null ? externalId.hashCode() : 0;
-        result = 31 * result + (pathToFile != null ? pathToFile.hashCode() : 0);
-        return result;
+    public void setUploaded(boolean uploaded) {
+        isUploaded = uploaded;
     }
 
     @Override

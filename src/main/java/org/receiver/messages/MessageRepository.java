@@ -12,79 +12,132 @@ public class MessageRepository {
     private Set<String> messagesIds;
     private Map<String, Message> messages;
     private List<Media> mediaStorage;
-    private int countMessages;
+    private String pathToData;
+    private int characterLimit;
 
-    public MessageRepository(Elements parsedData) {
+    public MessageRepository(Elements parsedData, String pathToData, int characterLimit) {
         messages = new HashMap<>();
-        messagesIds = new TreeSet<>();
+        messagesIds = new LinkedHashSet<>();
         mediaStorage = new ArrayList<>();
-        countMessages = 0;
+        this.pathToData = pathToData;
+        this.characterLimit = characterLimit;
 
         for (Element rawMessage : parsedData) {
             if ( rawMessage.classNames().contains("default") ) {
-                Message message = new Message();
-                message.setMessageId( rawMessage.attr("id") );
-
-                String textMessage = rawMessage.getElementsByClass("text").text();
-                if ( !textMessage.isBlank() ) {
-                    message.setTextMessage(textMessage);
-                }
-
-                String stickerPath = rawMessage.getElementsByClass("media_photo").attr("href");
-                if ( !stickerPath.isBlank() ) {
-                    Media sticker = new Media();
-                    sticker.setPathToFile(stickerPath);
-                    sticker.setMessageId(message.getMessageId());
-
-                    message.addMediaFileToRepository(sticker);
-                }
-
-                String photoPath = rawMessage.getElementsByClass("photo_wrap").attr("href");
-                if ( !photoPath.isBlank() ) {
-                    Media photo = new Media();
-                    photo.setPathToFile( "src/main/resources/ChatExport_2023-04-09/" + photoPath );
-                    photo.setMessageId(message.getMessageId());
-
-                    message.addMediaFileToRepository(photo);
-                }
-
-                /*String gifPath = rawMessage.getElementsByClass("animated_wrap").attr("href");
-                if ( !gifPath.isBlank() ) {
-                    Media gif = new Media();
-                    gif.setPathToFile(gifPath);
-                    gif.setMessageId(message.getId());
-
-                    message.addMediaFileToRepository(gif);
-                }*/
-
-                String videoPath = rawMessage.getElementsByClass("video_file_wrap").attr("href");
-                if ( !videoPath.isBlank() ) {
-                    Media video = new Media();
-                    video.setPathToFile(videoPath);
-                    video.setMessageId(message.getMessageId());
-
-                    message.addMediaFileToRepository(video);
-                }
-
-                Element reply = rawMessage.getElementsByClass("reply_to").first();
-                if ( reply != null ) {
-                    String replyHref = reply.getElementsByTag("a").first().attr("href");
-
-                    Pattern pattern = Pattern.compile("(message.*)");
-                    Matcher matcher = pattern.matcher(replyHref);
-                    if ( matcher.find() ) {
-                        message.setParentMessageId( matcher.group(1) );
-                    }
-                }
-
-
-                Boolean isMessageEmpty = message.isMessageEmpty();
-                if ( !isMessageEmpty ) {
-                    addMessage(message);
-                    System.out.println( message.getMessageId() );
-                }
+                processMessages(rawMessage);
             }
         }
+    }
+
+    private void processMessages(Element rawMessage) {
+        Message message = new Message();
+        message.setMessageId(rawMessage.attr("id"));
+
+        processMedia(rawMessage, message);
+        processText(rawMessage, message);
+
+        addMessage(message);
+    }
+
+    private void processMedia(Element rawMessage, Message message) {
+        addMediaIfPresent(rawMessage, message, "photo_wrap");
+        addMediaIfPresent(rawMessage, message, "video_file_wrap");
+        addMediaIfPresent(rawMessage, message, "media_voice_message");
+        addMediaIfPresent(rawMessage, message, "animated_wrap");
+        addMediaIfPresent(rawMessage, message, "media_audio_file");
+        addMediaIfPresent(rawMessage, message, "media_file");
+    }
+
+    private void addMediaIfPresent(Element rawMessage, Message message, String className) {
+        String path = rawMessage.getElementsByClass(className).attr("href");
+        if (!path.isBlank()) {
+            Media media = new Media(pathToData + path, message.getMessageId());
+            message.addMediaFileToRepository(media);
+        }
+    }
+
+    private void processText(Element rawMessage, Message message) {
+        Element forwardedBody = rawMessage.getElementsByClass("forwarded body").first();
+        String forwardedTitle = getForwardedTitle(forwardedBody);
+        String textMessage = rawMessage.getElementsByClass("text").text();
+
+        boolean isHaveText = textMessage != null && !textMessage.isBlank();
+        message.setHaveText(isHaveText);
+        boolean isForwarded = forwardedTitle != null && !forwardedTitle.isBlank();
+        message.setForwarded(isForwarded);
+
+        if ( isForwarded ) {
+            textMessage = "forwarded from " + forwardedTitle + "\n" + textMessage;
+        }
+
+        if (textMessage.length() > characterLimit) {
+            splitLongMessage(message, textMessage);
+        } else {
+            message.setTextMessage(textMessage);
+        }
+
+        String replyTo = getParentMessageId(rawMessage.getElementsByClass("reply_to").first());
+        if (replyTo != null && !replyTo.isBlank()) {
+            message.setParentMessageId(replyTo);
+        }
+    }
+
+    private void splitLongMessage(Message mainMessage, String messageText) {
+        String[] parts = messageText.split("(?<=[.!?]\\s)");
+        List<String> chunks = new ArrayList<>();
+        int maxStatusLength = characterLimit - 11;
+
+        StringBuilder currentChunk = new StringBuilder();
+        for (String sentence : parts) {
+            if (currentChunk.length() + sentence.length() > maxStatusLength) {
+                chunks.add(currentChunk.toString());
+                currentChunk = new StringBuilder(sentence);
+            } else {
+                currentChunk.append(" ").append(sentence);
+            }
+        }
+        chunks.add(currentChunk.toString());
+
+        int totalCount = chunks.size();
+        String parentMessageId = mainMessage.getMessageId();
+        for (int i = 0; i < totalCount; i++) {
+            String chunk = chunks.get(i);
+            int chunkNumber = i + 1;
+            String formattedChunk = "(" + chunkNumber + "/" + totalCount + ") " + chunk;
+
+            if ( i != 0 ) {
+                Message splittedMessage = new Message();
+                splittedMessage.setTextMessage(formattedChunk);
+                splittedMessage.setMessageId(parentMessageId + "_" + chunkNumber);
+                splittedMessage.setParentMessageId(parentMessageId);
+                splittedMessage.setHaveText(true);
+
+                addMessage(splittedMessage);
+            } else {
+                mainMessage.setTextMessage(formattedChunk);
+                addMessage(mainMessage);
+            }
+        }
+    }
+
+    private String getParentMessageId(Element reply) {
+        if (reply == null) {
+            return null;
+        }
+
+        String replyHref = reply.getElementsByTag("a").first().attr("href");
+        Pattern pattern = Pattern.compile("(message.*)");
+        Matcher matcher = pattern.matcher(replyHref);
+
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private String getForwardedTitle(Element forwardedBody) {
+        if (forwardedBody == null) {
+            return null;
+        }
+
+        return forwardedBody.getElementsByClass("from_name").text();
     }
 
     public Map<String, Message> getMessages() {
@@ -100,13 +153,10 @@ public class MessageRepository {
     }
 
     public void addMessage(Message message) {
-        messages.put(message.getMessageId(), message);
-        messagesIds.add(message.getMessageId());
-        mediaStorage.addAll(message.getMediaRepository());
-        countMessages++;
-    }
-
-    public int getCountMessages() {
-        return countMessages;
+        if ( !messages.containsKey(message.getMessageId()) ) {
+            messages.put(message.getMessageId(), message);
+            messagesIds.add(message.getMessageId());
+            mediaStorage.addAll(message.getMediaRepository());
+        }
     }
 }
