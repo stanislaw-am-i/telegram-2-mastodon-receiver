@@ -1,6 +1,7 @@
 package org.receiver.messages;
 
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
 import java.util.*;
@@ -60,6 +61,11 @@ public class MessageRepository {
         Element forwardedBody = rawMessage.getElementsByClass("forwarded body").first();
         String forwardedTitle = getForwardedTitle(forwardedBody);
         String textMessage = rawMessage.getElementsByClass("text").text();
+        Elements links = rawMessage.getElementsByClass("text").select("a[href]");
+
+        if ( !links.isEmpty() ) {
+            textMessage += getLinks(textMessage, links);
+        }
 
         boolean isHaveText = textMessage != null && !textMessage.isBlank();
         message.setHaveText(isHaveText);
@@ -138,6 +144,26 @@ public class MessageRepository {
         }
 
         return forwardedBody.getElementsByClass("from_name").text();
+    }
+
+    private String formText(Elements textNodes) {
+        StringBuilder textMessage = new StringBuilder();
+        for (TextNode textNode : textNodes.textNodes()) {
+            textMessage.append("\n" + textNode.getWholeText());
+        }
+
+        return textMessage.toString();
+    }
+
+    private String getLinks(String textMessage, Elements links) {
+        StringBuilder textLinks = new StringBuilder();
+        for (Element link : links) {
+            String textLink = link.attr("abs:href");
+            if ( !textMessage.contains(textLink) ) {
+                textLinks.append("\n" + link.attr("abs:href"));
+            }
+        }
+        return textLinks.toString();
     }
 
     public Map<String, Message> getMessages() {
