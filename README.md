@@ -1,21 +1,21 @@
 ##  telegram-2-mastodon-receiver
 This is the CLI tool that transports the history of the telegram channel to the mastodon account.
 
-### Dependencies 
+### Dependencies
 
 Java must be installed on your machine. This program was tested with the 19th version of java.
 
 ### Usage
 
-1) Run the following command in the terminal to get the .jar file: 
+[1] Run the following command in the terminal to get the .jar file:
 
-``wget https://github.com/stanislaw-am-i/telegram-2-mastodon-receiver/releases/download/0.0.1/telegram-2-mastodon-receiver-0.0.1-all.jar``
-
-
-2) Export your data from Telegram. How to do it you can check here: https://telegram.org/blog/export-and-more
+``wget https://github.com/stanislaw-am-i/telegram-2-mastodon-receiver/releases/download/0.0.1/telegram-2-mastodon-receiver-0.0.2-all.jar``
 
 
-3) Set up the configuration file called ``config`` in your favorite text editor:
+[2] Export your data from Telegram. How to do it you can check here: https://telegram.org/blog/export-and-more
+
+
+[3] Set up the configuration file called ``config`` in your favorite text editor:
 ```agsl
 ACCESS_TOKEN=<Your access token>
 BASE_URL=https://yourinstance.social
@@ -43,9 +43,9 @@ How to get your ``ACCESS_TOKEN``:
 
 ``PATH_TO_EXPORTED_DATA`` Path to directory with your exported Telegram data.
 
-4) Put the ``config`` file in the same directory as the .jar file.
+[4] Put the ``config`` file in the same directory as the .jar file.
 
 
-5) Then run this in terminal: 
+[5] Then run this in terminal:
 
-``java -jar telegram-2-mastodon-receiver-0.0.1-all.jar``
+``java -jar telegram-2-mastodon-receiver-0.0.2-all.jar``
