@@ -19,34 +19,36 @@ public class MastodonService {
     private String baseUrl;
     private String authSign;
     private int interval;
+    private MastodonAPI mastodonAPI;
 
     public MastodonService(MessageRepository statuses, String baseUrl, String authSign, int interval) {
         this.statuses = statuses;
         this.baseUrl = baseUrl + "/api/v1/";
         this.authSign = "access_token=" + authSign;
         this.interval = interval;
+        mastodonAPI = MastodonAPI.getInstance();
     }
 
     public void postStatusesToMastodon() {
         try {
             processUploadMedia(statuses.getMediaStorage());
             processUploadStatuses(statuses.getMessages(), statuses.getMessagesIds());
-        } catch (Exception e) {
-            System.out.println(e);
+        } catch (ReceiverException | IOException | InterruptedException e) {
+            e.printStackTrace();
         }
-
     }
 
     private void processUploadMedia(List<Media> mediaStorage)
             throws InterruptedException, IOException, ReceiverException {
+        System.out.println("Uploaded media files...");
+
         for ( Media media : mediaStorage ) {
-            MastodonAPI uploadMedia = new MastodonAPI();
-            uploadMedia.setBody(media.getId(), media.getPathToFile());
+            mastodonAPI.setBody(media.getId(), media.getPathToFile());
 
             String url = baseUrl + "media?" + authSign;
-            uploadMedia.setRequest(url, "POST");
-            uploadMedia.makeCall();
-            Response response = uploadMedia.getResponse();
+            mastodonAPI.setRequest(url, "POST");
+            mastodonAPI.makeCall();
+            Response response = mastodonAPI.getResponse();
 
             String stringifyResponse = response.body().string();
             media.setUploaded(response.isSuccessful());
@@ -54,7 +56,7 @@ public class MastodonService {
                 JSONObject prettyResponse = new JSONObject(stringifyResponse);
                 media.setExternalId( prettyResponse.get("id").toString() );
             }
-            System.out.println(stringifyResponse);
+            printResponse(stringifyResponse, response.code());
 
             TimeUnit.SECONDS.sleep(interval);
         }
@@ -64,6 +66,7 @@ public class MastodonService {
             Map<String, Message> statusesToPost,
             Set<String> statusesLocalIds
     ) throws InterruptedException, IOException, ReceiverException {
+        System.out.println("Post statuses...");
 
         for ( String statusId : statusesLocalIds ) {
             Message status = statusesToPost.get(statusId);
@@ -87,22 +90,35 @@ public class MastodonService {
                 }
             }
 
-            MastodonAPI postStatus = new MastodonAPI();
-            postStatus.setMediaType(STATUS_MEDIA_TYPE);
-            postStatus.setBody(body);
+            mastodonAPI.setMediaType(STATUS_MEDIA_TYPE);
+            mastodonAPI.setBody(body);
             String url = baseUrl + "statuses?" + authSign;
-            postStatus.setRequest(url, "POST", STATUS_MEDIA_TYPE);
-            postStatus.makeCall();
-            Response response = postStatus.getResponse();
+            mastodonAPI.setRequest(url, "POST", STATUS_MEDIA_TYPE);
+            mastodonAPI.makeCall();
+            Response response = mastodonAPI.getResponse();
 
             String stringifyResponse = response.body().string();
             if (response.isSuccessful()) {
                 JSONObject prettyResponse = new JSONObject(stringifyResponse);
                 status.setExternalId(prettyResponse.get("id").toString());
             }
-            System.out.println(stringifyResponse);
+            printResponse(stringifyResponse, response.code());
 
             TimeUnit.SECONDS.sleep(interval);
         }
+    }
+
+    private void printResponse(String responseText, int responseCode) {
+        String coloredResponse;
+
+        if (responseCode == 200) {
+            coloredResponse = "\u001B[32m" + responseText + "\u001B[0m"; // Green color
+        } else if (responseCode == 202) {
+            coloredResponse = "\u001B[33m" + responseText + "\u001B[0m"; // Yellow color
+        } else {
+            coloredResponse = "\u001B[31m" + responseText + "\u001B[0m"; // Red color
+        }
+
+        System.out.println(coloredResponse);
     }
 }

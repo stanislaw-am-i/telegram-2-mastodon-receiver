@@ -5,6 +5,7 @@ import org.receiver.receiver.ReceiverException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class MastodonAPI {
 
@@ -14,8 +15,27 @@ public class MastodonAPI {
     private Request request;
     private Response response;
 
-    public MastodonAPI() {
-        client = new OkHttpClient().newBuilder().build();
+    private static volatile MastodonAPI instance;
+
+    public static MastodonAPI getInstance() {
+        MastodonAPI localInstance = instance;
+        if (localInstance == null) {
+            synchronized (MastodonAPI.class) {
+                localInstance = instance;
+                if (localInstance == null) {
+                    instance = localInstance = new MastodonAPI();
+                }
+            }
+        }
+        return localInstance;
+    }
+
+    private MastodonAPI() {
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        builder.connectTimeout(60, TimeUnit.SECONDS);
+        builder.readTimeout(60, TimeUnit.SECONDS);
+        builder.writeTimeout(60, TimeUnit.SECONDS);
+        client = builder.build();
     }
 
     public void makeCall() throws ReceiverException, IOException {
@@ -23,7 +43,11 @@ public class MastodonAPI {
             throw new ReceiverException("Please, Create The Body Of Request First");
         }
 
-        response = client.newCall(request).execute();
+        try {
+            response = client.newCall(request).execute();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void setClient(OkHttpClient client) {

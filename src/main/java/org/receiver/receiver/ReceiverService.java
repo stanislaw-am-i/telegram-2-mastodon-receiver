@@ -8,6 +8,7 @@ import org.receiver.messages.MessageRepository;
 
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.Properties;
 
 public class ReceiverService {
@@ -34,7 +35,7 @@ public class ReceiverService {
             MessageRepository messages = new MessageRepository(parsedData, pathToData, charactersLimit);
             MastodonService mastodonService = new MastodonService(messages, baseUrl, authSign, interval);
             mastodonService.postStatusesToMastodon();
-        } catch (Exception e) {;
+        } catch (IOException | ReceiverException e) {
             System.out.println(e.getClass() + " " + e.getMessage() + " " + e.getCause());
             int size = e.getStackTrace().length - 1;
             System.out.println("   Root cause: " + e.getStackTrace()[size].getMethodName() + " " + e.getStackTrace()[size].getClassName());
