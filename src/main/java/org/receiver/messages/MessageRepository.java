@@ -60,26 +60,26 @@ public class MessageRepository {
     private void processText(Element rawMessage, Message message) {
         Element forwardedBody = rawMessage.getElementsByClass("forwarded body").first();
         String forwardedTitle = getForwardedTitle(forwardedBody);
-        String textMessage = rawMessage.getElementsByClass("text").text();
-        Elements links = rawMessage.getElementsByClass("text").select("a[href]");
+        String textMessageWithHtml = rawMessage.getElementsByClass("text").html();
+        String strippedMessage = textMessageWithHtml
+                .replaceAll("<a[^>]*href=[\\\"'](https?://[^\\\"']*)[\\\"'][^>]*>([^<]*)</a>", "$2 [$1]")
+                .replaceAll("<a[^>]*href=[\\\"'](https?://[^\\\"']*)[\\\"'][^>]*>([^<]*)", "$2 [$1]")
+                .replaceAll("(?i)<(?!a|br).*?>", "")
+                .replaceAll("<br>", "\n");
 
-        if ( !links.isEmpty() ) {
-            textMessage += getLinks(textMessage, links);
-        }
-
-        boolean isHaveText = textMessage != null && !textMessage.isBlank();
+        boolean isHaveText = !strippedMessage.isBlank();
         message.setHaveText(isHaveText);
         boolean isForwarded = forwardedTitle != null && !forwardedTitle.isBlank();
         message.setForwarded(isForwarded);
 
         if ( isForwarded ) {
-            textMessage = "forwarded from " + forwardedTitle + "\n" + textMessage;
+            strippedMessage = "forwarded from " + forwardedTitle + "\n" + strippedMessage;
         }
 
-        if (textMessage.length() > characterLimit) {
-            splitLongMessage(message, textMessage);
+        if (strippedMessage.length() > characterLimit) {
+            splitLongMessage(message, strippedMessage);
         } else {
-            message.setTextMessage(textMessage);
+            message.setTextMessage(strippedMessage);
         }
 
         String replyTo = getParentMessageId(rawMessage.getElementsByClass("reply_to").first());
@@ -144,26 +144,6 @@ public class MessageRepository {
         }
 
         return forwardedBody.getElementsByClass("from_name").text();
-    }
-
-    private String formText(Elements textNodes) {
-        StringBuilder textMessage = new StringBuilder();
-        for (TextNode textNode : textNodes.textNodes()) {
-            textMessage.append("\n" + textNode.getWholeText());
-        }
-
-        return textMessage.toString();
-    }
-
-    private String getLinks(String textMessage, Elements links) {
-        StringBuilder textLinks = new StringBuilder();
-        for (Element link : links) {
-            String textLink = link.attr("abs:href");
-            if ( !textMessage.contains(textLink) ) {
-                textLinks.append("\n" + link.attr("abs:href"));
-            }
-        }
-        return textLinks.toString();
     }
 
     public Map<String, Message> getMessages() {

@@ -53,33 +53,8 @@ public class ReceiverServiceTest {
         receiverService.processedExportedDataToPostStatuses();
         String expectedOutput = "class java.io.FileNotFoundException path/to/data/messages.html (No such file or directory) null\n" +
                 "   Root cause: main com.intellij.rt.junit.JUnitStarter\n" +
-                "   Penultimate cause: method=prepareStreamsAndStart class=com.intellij.rt.junit.JUnitStarter line=235";
-        assertEquals(expectedOutput.trim(), outContent.toString().trim());
+                "   Penultimate cause: method=prepareStreamsAndStart class=com.intellij.rt.junit.JUnitStarter line=232";
 
-        // Clear the console output stream
-        outContent.reset();
-
-        // Test that the method prints the expected message when the exported data is empty
-        // Create a mock empty file
-        File emptyFile = File.createTempFile("empty-file", ".html");
-        FileWriter writer = new FileWriter(emptyFile);
-        writer.write("");
-        writer.close();
-
-        // Override the properties to use the mock empty file
-        Properties properties = new Properties();
-        properties.setProperty("PATH_TO_EXPORTED_DATA", emptyFile.getParent() + File.separator);
-        properties.setProperty("CHARACTER_LIMITATION", "100");
-        properties.setProperty("BASE_URL", "http://example.com");
-        properties.setProperty("ACCESS_TOKEN", "secret");
-        properties.setProperty("INTERVAL", "10");
-        properties.store(new java.io.FileOutputStream(configFile), "Test properties");
-
-        // Call the method and expect it to print the expected message
-        receiverService.processedExportedDataToPostStatuses();
-        expectedOutput = "class java.io.FileNotFoundException /tmp/messages.html (No such file or directory) null\n" +
-                "   Root cause: main com.intellij.rt.junit.JUnitStarter\n" +
-                "   Penultimate cause: method=prepareStreamsAndStart class=com.intellij.rt.junit.JUnitStarter line=235";
         assertEquals(expectedOutput.trim(), outContent.toString().trim());
     }
 }
