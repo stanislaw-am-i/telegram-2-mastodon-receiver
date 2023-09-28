@@ -3,7 +3,7 @@ This is the CLI tool that transports the history of the telegram channel to the 
 
 ### Dependencies
 
-Java 19th must be installed on your machine.
+Java 19th or higher must be installed on your machine.
 
 ### Usage
 
